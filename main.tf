@@ -1,79 +1,94 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "3.26.0"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "3.0.1"
-    }
-  }
-  required_version = ">= 1.1.0"
-
-  cloud {
-    organization = "Tdexpeter"
-
-    workspaces {
-      name = "gh-actions-demo"
-    }
-  }
-}
-
 provider "aws" {
-  region = "us-west-2"
+  region     = "us-east-1"
+  access_key = "AKIAQMKOIB224ACVRTPR"
+  secret_key = "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"
 }
 
-resource "random_pet" "sg" {}
+# Creating VPC
 
-data "aws_ami" "ubuntu" {
-  most_recent = true
+resource "aws_vpc" "open-react-templatevpc" {
+  cidr_block       = "10.0.0.0/16"
+  instance_tenancy = "default"
 
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+  tags = {
+    Name = "open-react-template"
+  }
+}
+
+#Creating Subnet
+
+resource "aws_subnet" "open-react-template_sub" {
+  vpc_id     = aws_vpc.open-react-templatevpc.id
+  cidr_block = "10.0.1.0/24"
+
+  tags = {
+    Name = "open-react-template"
+  }
+}
+
+# Internet Gateway
+resource "aws_internet_gateway" "open-react-template_gw" {
+  vpc_id = aws_vpc.open-react-templatevpc.id
+
+  tags = {
+    Name = "open-react-template"
+  }
+}
+
+resource "aws_route_table" "open-react-template_route" {
+  vpc_id = aws_vpc.open-react-templatevpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.open-react-template_gw.id
   }
 
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
+  tags = {
+    Name = "open-react-template"
   }
-
-  owners = ["099720109477"] # Canonical
 }
 
-resource "aws_instance" "web" {
-  ami                    = data.aws_ami.ubuntu.id
-  instance_type          = "t2.micro"
-  vpc_security_group_ids = [aws_security_group.web-sg.id]
+#Security group
 
-  user_data = <<-EOF
-              #!/bin/bash
-              apt-get update
-              apt-get install -y apache2
-              sed -i -e 's/80/8080/' /etc/apache2/ports.conf
-              echo "Hello World" > /var/www/html/index.html
-              systemctl restart apache2
-              EOF
-}
+resource "aws_security_group" "open-react-template_sg" {
+  name        = "allow_tls"
+  description = "Allow TLS inbound traffic"
+  vpc_id      = aws_vpc.open-react-templatevpc.id
 
-resource "aws_security_group" "web-sg" {
-  name = "${random_pet.sg.id}-sg"
   ingress {
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description      = "TLS from VPC"
+    from_port        = 443
+    to_port          = 443
+    protocol         = "tcp"
+    cidr_blocks      = [aws_vpc.open-react-templatevpc.cidr_block]
   }
-  // connectivity to ubuntu mirrors is required to run `apt-get update` and `apt-get install apache2`
+
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+
+  tags = {
+    Name = "allow_tls"
   }
 }
 
-output "web-address" {
-  value = "${aws_instance.web.public_dns}:8080"
+resource "aws_network_interface" "open-react-template_ni" {
+  subnet_id       = aws_subnet.open-react-template_sub.id
+  security_groups = [aws_security_group.open-react-template_sg.id]
+
+  
+
+}
+
+resource "aws_instance" "open-react-template_web" {
+  ami           = "ami-0b5eea76982371e91"
+  instance_type = "t2.micro"
+
+  tags = {
+    Name = "open-react-template"
+  }
 }
