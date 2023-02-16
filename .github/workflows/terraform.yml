@@ -22,18 +22,10 @@ jobs:
         id: init
         run: terraform init
       
-      - name: Terraform Validate
-        id: validate
-        run: terraform validate -no-color
-
-      - name: Terraform Plan
-        id: plan
-        run: terraform plan
-
-      - name: Terraform Apply
-        id: apply
-        run: terraform apply -auto-approve
-
+      - name: Terraform state list
+        id: List
+        run: terraform state list
+        
       - name: Terraform destroy
         id: destroy
         run: terraform destroy -auto approve
