@@ -4,7 +4,7 @@ provider "aws" {
   secret_key = "secrets.AWS_SECRET_ACCESS_KEY"
 }
 
-# Creating VPC
+# Creating VPCc
 
 resource "aws_vpc" "tdex-projectvpc" {
   cidr_block       = "10.0.0.0/16"
